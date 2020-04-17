@@ -3,7 +3,8 @@ import logging
 import threading
 import sys
 import time
-from salt import client
+import re
+from subprocess import Popen,PIPE
 from tornado import web, ioloop
 from prometheus_client import generate_latest
 from prometheus_client import CONTENT_TYPE_LATEST
@@ -39,10 +40,12 @@ args = parser.parse_args()
 log = logging.getLogger(__name__)
 
 class SaltHighstateCollector(object):
-    def __init__(self, caller, highstate_interval):
-        self.caller = caller
+    def __init__(self, highstate_interval):
         self.statedata = None
         self.last_highstate = 0
+        self.state_id_regex = re.compile(r'\s+ID:.*')
+        self.state_error_regex = re.compile(r'\s+Result: False')
+        self.state_none_regex = re.compile(r'\s+Result: None')
 
         self.states_total = lambda sample: GaugeMetricFamily(
             'saltstack_states_total',
@@ -82,23 +85,27 @@ class SaltHighstateCollector(object):
         yield self.states_last_highstate(None)
 
     def collect(self):
-        success = isinstance(self.statedata, dict)
+        success = isinstance(self.statedata, list)
 
         if not success:
             log.error('Failed to collect Highstate. Return data: {0}'.format(self.statedata))
             return
 
-        yield self.states_total(len(self.statedata))
+        states = list(filter(
+            self.state_id_regex.search,
+            self.statedata
+        ))
+        yield self.states_total(len(states))
 
-        nonhigh = filter(
-            lambda (id, state): state['result'] is None,
-            self.statedata.iteritems()
-        )
+        nonhigh = list(filter(
+            self.state_none_regex.search,
+            self.statedata
+        ))
         yield self.states_nonhigh(len(nonhigh))
 
         error = filter(
-            lambda (id, state): state['result'] is False,
-            self.statedata.iteritems()
+            self.state_error_regex.search,
+            self.statedata
         )
         yield self.states_error(len(error))
 
@@ -106,10 +113,13 @@ class SaltHighstateCollector(object):
 
     def collect_worker(self, highstate_interval):
         while True:
-            self.statedata = self.caller.cmd('state.highstate', test=True)
+            p = Popen('salt-call state.highstate test=t'.split(),
+                             shell=False,
+                             stdout=PIPE,
+                             stderr=PIPE)
+            self.statedata = p.communicate()[0].split('\n')
             self.last_highstate = int(time.time())
             time.sleep(highstate_interval)
-
 
 class RootHandler(web.RequestHandler):
     def get(self):
@@ -151,8 +161,7 @@ def init_logging():
         logger.addHandler(stdout_handler)
 
 def main():
-    caller = client.Caller()
-    REGISTRY.register(SaltHighstateCollector(caller, args.highstate_interval))
+    REGISTRY.register(SaltHighstateCollector(args.highstate_interval))
 
     init_logging()
 

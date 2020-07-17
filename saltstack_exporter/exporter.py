@@ -103,10 +103,10 @@ class SaltHighstateCollector(object):
         ))
         yield self.states_nonhigh(len(nonhigh))
 
-        error = filter(
+        error = list(filter(
             self.state_error_regex.search,
             self.statedata
-        )
+        ))
         yield self.states_error(len(error))
 
         yield self.states_last_highstate(self.last_highstate)
@@ -172,7 +172,7 @@ def main():
     ])
     app.listen(args.listen_port, args.listen_addr)
 
-    print 'Serving metrics on {}:{}'.format(args.listen_addr, args.listen_port)
+    print('Serving metrics on {}:{}'.format(args.listen_addr, args.listen_port))
     ioloop.IOLoop.current().start()
 
 

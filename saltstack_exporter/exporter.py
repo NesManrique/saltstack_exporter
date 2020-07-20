@@ -117,7 +117,7 @@ class SaltHighstateCollector(object):
                              shell=False,
                              stdout=PIPE,
                              stderr=PIPE)
-            self.statedata = p.communicate()[0].split('\n')
+            self.statedata = p.communicate()[0].decode().split('\n')
             self.last_highstate = int(time.time())
             time.sleep(highstate_interval)
 

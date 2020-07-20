@@ -4,7 +4,7 @@ from os import path
 
 setup(
     name='saltstack_exporter',
-    version='0.0.7',
+    version='0.0.8',
 
     description='Prometheus exporter for Saltstack minions',
     url='https://github.com/BonnierNews/saltstack_exporter',
@@ -17,9 +17,7 @@ setup(
         'Intended Audience :: System Administrators',
         'Topic :: Software Development :: Build Tools',
         'License :: OSI Approved :: MIT License',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.6',
-        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
     ],
     keywords='saltstack prometheus',
 

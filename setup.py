@@ -22,7 +22,7 @@ setup(
     keywords='saltstack prometheus',
 
     packages=['saltstack_exporter'],
-    install_requires=['prometheus_client'],
+    install_requires=['prometheus_client>=0.0.18', 'tornado>=6,<7'],
     extras_require={
         'dev': [],
         'test': [],
